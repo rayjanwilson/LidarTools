@@ -2,9 +2,26 @@
 
 import os
 import re
+import numpy as np
 
-def lidar_processing(workingDir, image, opts):
-    pass
+def getArray(filename):
+    x, y, z = np.loadtxt(filename, delimiter=',', unpack=True)
+    data = np.array([x, y, z]).transpose() 
+    return data
+
+def lidar_processing(image, opts):    
+    xyz = getArray(image)
+    print "xyz shape: ", xyz.shape
+    north_min = np.min(xyz[:,0])
+    north_max = np.max(xyz[:,0])
+    east_min = np.min(xyz[:,1])
+    east_max = np.max(xyz[:,1])
+    elev_min = np.min(xyz[:,2])
+    elev_max = np.max(xyz[:,2])
+    print "northing: min ", north_min, " max: ", north_max
+    print "easting: min ", east_min, " max: ", east_max
+    print "elev: min ", elev_min, " max: ", elev_max 
+    
 
 if __name__ == '__main__':
     import optparse
@@ -34,9 +51,9 @@ if __name__ == '__main__':
 
         for file in os.listdir("."):
             if re.search('.xyz', file):
-                image = file.split(".xyz")[0]
+                image = file
             else:
                 pass
 
-        lidar_processing(workingDir, image, opts)
+        lidar_processing(image, opts)
     
