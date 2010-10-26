@@ -163,6 +163,13 @@ void ReSizeGLScene(int Width, int Height)
 
   gluPerspective(45.0f,(GLfloat)Width/(GLfloat)Height,0.1f,100.0f);
   glMatrixMode(GL_MODELVIEW);
+
+  // set up lights.
+    glLightfv(GL_LIGHT1, GL_AMBIENT, LightAmbient);
+    glLightfv(GL_LIGHT1, GL_DIFFUSE, LightDiffuse);
+    glLightfv(GL_LIGHT1, GL_POSITION, LightPosition);
+    glEnable(GL_LIGHT1);
+
 }
 
 
@@ -208,7 +215,7 @@ void DrawGLScene()
             ym = sector1.point[loop].y;
             zm = sector1.point[loop].z;
             float fColor = (zm)/sector1.maxheight;
-            glColor3f(1-fColor, fColor/2, fColor);
+            glColor3f(fColor, fColor/2, 1-fColor);
             glVertex3f( xm, ym, zm);
         glEnd();
     }
@@ -289,13 +296,13 @@ void specialKeyPressed(int key, int x, int y)
         break;
 
     case GLUT_KEY_UP: // walk forward (bob head)
-        xpos -= (float)sin(yrot*piover180) * 0.05f;
-        zpos -= (float)cos(yrot*piover180) * 0.05f;
+        xpos -= (float)sin(yrot*piover180) * 0.2f;
+        zpos -= (float)cos(yrot*piover180) * 0.2f;
         break;
 
     case GLUT_KEY_DOWN: // walk back (bob head)
-        xpos += (float)sin(yrot*piover180) * 0.05f;
-        zpos += (float)cos(yrot*piover180) * 0.05f;
+        xpos += (float)sin(yrot*piover180) * 0.2f;
+        zpos += (float)cos(yrot*piover180) * 0.2f;
         break;
 
     case GLUT_KEY_LEFT: // look left
