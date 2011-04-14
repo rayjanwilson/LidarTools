@@ -1,0 +1,325 @@
+<html>
+<head>
+
+<title>WebGL LiDAR Rendering</title>
+<script type="text/javascript" src="js/jquery-1.5.2.min.js"></script>
+<script type="text/javascript" src="./GLGE/glge-compiled-min.js"></script> 
+<style>
+body{margin:auto; background-color: #888; padding-top: 50px; font-family:sans; color: #666; font-size: 0.8em}
+#container{ margin:auto; width: 1080px; padding: 10px; background-color: #000; border-radius: 5px; -webkit-box-shadow: 5px 5px 2px #444; }
+</style>
+</head>
+<body>
+
+    <div id="container">
+        <canvas id="canvas" width="1080" height="720"></canvas>
+        <div id="framerate" style="position:absolute; left: 750px; top: 20px; background-color: #000; opacity: 0.5;height: 30px; width: 130px; border-radius: 5px;	-moz-border-radius5px;-webkit-border-radius:5px;border: 1px solid #fff;">
+            <div id="debug" style="padding: 5px"></div>
+        </div>
+        <div id="details">
+        <h1>WebGL LiDAR Rendering</h1>
+        <p>An example of using WebGL to render a LiDAR point cloud. </p>
+
+    </div>
+</div>
+
+<script id="glge_document" type="text/xml">
+	<glge>
+		<!--
+		The first thing we'll define in our XML file is the lines. We do this using mesh element
+		-->
+		<mesh id="xline">
+			<positions>
+			-100,0,0,
+			100,0,0
+			</positions>
+		</mesh>
+		<mesh id="yline">
+			<positions>
+			0,-100,0,
+			0,100,0
+			</positions>
+		</mesh>
+		<mesh id="zline">
+			<positions>
+			0,0,-100,
+			0,0,100
+			</positions>
+		</mesh>
+		<!--
+		We'll need a material to apply to our lines so set up a few colors to choose from
+		-->
+		<material id="red" specular="0" color="#f00" emit="1" />
+		<material id="green" specular="0" color="#0f0" emit="1" />
+		<material id="blue" specular="0" color="#00f" emit="1" />
+		<material id="black" specular="0" color="#444" alpha="1.0" emit="1" />
+		<material id="white" specular="0" color="#fff" alpha="1.0" emit="1" />
+		<material id="gray" specular="0" color="#333" aplha="1.0" emit="1" />
+		<!--
+		Since we want our graph spining within our scene we have two choices we can manually set it up 
+		to do so in javascript or alternativly GLGE provides a declaritve was of specify both complex and simple
+		animation. Lets set up the animation for a simple spin around the axis.
+		-->
+<!--		<animation_vector id="spin" frames="240">
+			<animation_curve channel="RotY">
+				<linear_point x="0.0" y="0.0" />
+				<linear_point x="240.0" y="6.282.0" />
+			</animation_curve>
+		</animation_vector>
+-->		
+		<!--
+		Now we define our scene 
+		-->
+		
+		<scene id="mainscene" camera="#mainCamera">
+			<!--
+			We need to add our axis to the sence and giving them the materials defined earlier.
+			We also need to set our draw_type in this case "DRAW_LINES" which draws from one vertice in the mesh to the next
+			We also set the width of the line to "2"
+			-->
+			<group id="graph">
+				<object id="xaxis" draw_type="DRAW_LINES" line_width="10" mesh="#xline" material="#red"  />
+				<object id="yaxis" draw_type="DRAW_LINES" line_width="10" mesh="#yline" material="#green"  />
+				<object id="zaxis" draw_type="DRAW_LINES" line_width="" mesh="#zline" material="#blue"  />
+			</group>
+			<!--
+			The scene is now in need of a camera, since we don't want to be viewing from the origin
+			we'll offset the camera in the world and adjust it's rotation to point at the cube.
+			Note: The camera rotation is specified in radians and not degrees
+			-->
+<!--			<camera id="mainCamera" loc_z="50" loc_y="25"  rot_x="-0.3"  /> -->
+
+			<camera id="mainCamera" loc_x="100" loc_y="2720" loc_z="100" rot_order="ROT_XZY" rot_z="0" rot_x=".3" rot_y="0" />
+		</scene>
+	</glge>
+</script>
+
+<script>
+/**
+Now we've finished declaring our scene we need to initialize our scene by creating a renderer and document parser to process
+our XML.
+
+Create the renderer object
+**/
+var canvas = document.getElementById( 'canvas' )
+var renderer = new GLGE.Renderer( canvas );
+
+/**
+Now we'll create a new document object to parse our previously declared XML. Since we don't want to start rendering until
+our scene is initiallized we have to add the majority of our code in the onload callback.
+**/
+var XMLdoc = new GLGE.Document();
+
+XMLdoc.onLoad = function(){
+	/**
+	Our document should now be ready for use so lets attach the main scene to the renderer. 
+	**/
+	var scene = XMLdoc.getElement( "mainscene" );
+	scene.setBackgroundColor("#000");
+	renderer.setScene( scene );
+	renderer.render();
+	
+	
+	/**
+	Create the data need for our lines
+	**/
+	var positions=(function(){
+	    var json = null;
+	    $.ajax({
+    	    'async': false,
+    	    'global': false,
+    	    'isLocal': true,
+    	    'url': 'http://glge.local/uaf.json',
+    	    'dataType': "json",
+    	    'timeout': 1200000,
+    	    'success': function (data){
+    	        json = data;
+    	    }
+	    });
+	    return json;
+	})();
+	console.log(positions);
+/**	var positions=[9.14, 12.15, 9.35,
+9.63, 13.52, 9.42,
+3.51, 12.15, 9.09,
+3.59, 14.90, 9.65,
+3.70, 17.69, 0.01,
+4.38, 17.09, 9.85,
+4.30, 14.56, 9.52,
+4.23, 12.10, 8.89,
+9.50, 12.87, 8.53,
+9.57, 15.63, 9.19,
+9.68, 18.42, 9.68,
+10.11, 18.48, 9.71,
+10.04, 16.01, 9.06,
+9.96, 13.52, 8.60,
+13.73, 12.74, 8.34,
+13.80, 15.56, 8.67,
+13.91, 18.35, 9.16,
+13.99, 21.07, 9.78,
+14.47, 22.18, 0.08,
+14.40, 19.75, 9.29,
+14.14, 14.11, 14.94,
+14.32, 17.23, 8.93,
+14.22, 14.73, 8.47,
+14.15, 12.17, 8.21,
+19.20, 14.06, 8.24,
+19.28, 16.92, 8.53,
+19.17, 16.26, 16.51,
+19.38, 19.67, 9.06,
+19.23, 18.43, 19.89,
+19.46, 22.43, 9.65];
+	**/
+
+    /**
+    mouse and movement functions
+    **/
+    var mouse=new GLGE.MouseInput(document.getElementById('canvas'));
+    var keys=new GLGE.KeyInput();
+    var mouseovercanvas;
+
+    function mouselook(){
+    	if(mouseovercanvas){
+    		var mousepos=mouse.getMousePosition();
+    		mousepos.x=mousepos.x-document.getElementById("container").offsetLeft;
+    		mousepos.y=mousepos.y-document.getElementById("container").offsetTop;
+	    	var camera=scene.camera;
+   	    	camerarot=camera.getRotation();
+	    	inc=(mousepos.y-(document.getElementById('canvas').offsetHeight/2))/500;
+	    	var trans=GLGE.mulMat4Vec4(camera.getRotMatrix(),[0,0,-1,1]);
+	    	var mag=Math.pow(Math.pow(trans[0],2)+Math.pow(trans[1],2),0.5);
+	    	trans[0]=trans[0]/mag;
+	    	trans[1]=trans[1]/mag;
+	    	camera.setRotX(1.56-trans[1]*inc);
+	    	camera.setRotZ(-trans[0]*inc);
+	    	var width=document.getElementById('canvas').offsetWidth;
+	    	if(mousepos.x<width*0.3){
+	    		var turn=Math.pow((mousepos.x-width*0.3)/(width*0.3),2)*0.005*(now-lasttime);
+	    		camera.setRotY(camerarot.y+turn);
+	    	}
+	    	if(mousepos.x>width*0.7){
+	    		var turn=Math.pow((mousepos.x-width*0.7)/(width*0.3),2)*0.005*(now-lasttime);
+	    		camera.setRotY(camerarot.y-turn);
+	    	}
+	    }
+    }
+
+    function checkkeys(){
+	    var camera=scene.camera;
+	    camerapos=camera.getPosition();
+	    camerarot=camera.getRotation();
+	    var mat=camera.getRotMatrix();
+	    var trans=GLGE.mulMat4Vec4(mat,[0,0,-1,1]);
+	    var mag=Math.pow(Math.pow(trans[0],2)+Math.pow(trans[1],2),0.5);
+	    trans[0]=trans[0]/mag;
+	    trans[1]=trans[1]/mag;
+	    var yinc=0;
+	    var xinc=0;
+	    var zinc=0;
+	    
+	    if(keys.isKeyPressed(GLGE.KI_W)) {yinc=yinc+parseFloat(trans[1]);xinc=xinc+parseFloat(trans[0]);}
+	    if(keys.isKeyPressed(GLGE.KI_S)) {yinc=yinc-parseFloat(trans[1]);xinc=xinc-parseFloat(trans[0]);}
+	    if(keys.isKeyPressed(GLGE.KI_A)) {yinc=yinc+parseFloat(trans[0]);xinc=xinc-parseFloat(trans[1]);}
+	    if(keys.isKeyPressed(GLGE.KI_D)) {yinc=yinc-parseFloat(trans[0]);xinc=xinc+parseFloat(trans[1]);}
+	    if(keys.isKeyPressed(GLGE.KI_Q)) {zinc=zinc+1;}
+  	    if(keys.isKeyPressed(GLGE.KI_E)) {zinc=zinc-1;}
+	    
+	    if(xinc!=0 || yinc!=0 || zinc!=0){
+	    	camera.setLocY(camerapos.y+yinc*0.05*(now-lasttime));
+	    	camera.setLocX(camerapos.x+xinc*0.05*(now-lasttime));
+	    	camera.setLocZ(camerapos.z+zinc*0.05*(now-lasttime));
+	    }
+    }
+    
+	/**
+	Get reference to the black material and the main graph group
+	**/
+	var black=XMLdoc.getElement( "black" );
+	var white=XMLdoc.getElement( "white" );
+	var gray=XMLdoc.getElement( "gray" );
+	var graph=XMLdoc.getElement( "graph" );
+	
+	
+	/**
+	create new object and mesh and set the positions we've previously calculated
+	**/
+	var lidar=(new GLGE.Object).setDrawType(GLGE.DRAW_POINTS);
+	    lidar.setMesh((new GLGE.Mesh).setPositions(positions));
+	    lidar.setPointSize(1);
+	    lidar.setMaterial(white);
+	    lidar.setZtransparent(true);
+	graph.addObject(lidar);
+	
+    /**
+	Create the grid lines
+	**/
+	var grid=[];
+	
+	var push=function(x,y){
+		grid.push(x);
+		grid.push(y);
+		grid.push(0);
+	}
+	var maxval = 3000;
+	var delta = 50;
+	for(var y=-maxval; y<maxval;y=y+delta){
+		var x=-maxval;
+		push(x,y);
+		for(; x<maxval;x=x+delta){
+			push(x,y);
+			push(x,y);
+		}
+		push(x,y);
+	}	
+	for(var y=-maxval; y<maxval;y=y+delta){
+		var x=-maxval;
+		push(y,x);
+		for(; x<maxval;x=x+delta){
+			push(y,x);
+			push(y,x);
+		}
+		push(y,x);
+	}
+	
+	/**
+	create new object and mesh and set the positions we've previously calculated
+	**/
+	var grid_lines=(new GLGE.Object).setDrawType(GLGE.DRAW_LINES);
+	grid_lines.setMesh((new GLGE.Mesh).setPositions(grid));
+	grid_lines.setMaterial(gray);
+	grid_lines.setZtransparent(true);
+	graph.addObject(grid_lines);
+	
+	/**
+	Now we simply set up a render loop for our scene
+	**/
+	var lasttime=0;
+    var frameratebuffer=60;
+    start=parseInt(new Date().getTime());
+    var cnt=0;
+    function render(){
+        now=parseInt(new Date().getTime());
+	    frameratebuffer=Math.round(((frameratebuffer*9)+1000/(now-lasttime))/10);
+	    document.getElementById("debug").innerHTML="Frame Rate:"+frameratebuffer;
+        mouselook();
+        checkkeys();
+        renderer.render();
+        lasttime=now;
+    }
+    setInterval(render,1);
+    var inc=0.2;
+    document.getElementById("canvas").onmousemove=function(e){mouseovercanvas=true;}
+    document.getElementById("canvas").onmouseover=function(e){mouseovercanvas=true;}
+    document.getElementById("canvas").onmouseout=function(e){mouseovercanvas=false;}
+}
+/**
+Finally we need to specify the xml we wish the document parser to use. This can be either a external XML file or alternativly
+a string which can be embended into the main page as in this case.
+**/
+XMLdoc.parseScript("glge_document");
+
+</script>
+
+</body>
+</html>
+
